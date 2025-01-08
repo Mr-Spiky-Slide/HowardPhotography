@@ -1,1 +1,16 @@
 *{font-family: 'Times New Roman', Times, serif;}
+#parent div {
+    display:none;
+    position: absolute;
+    top: 0;
+    left: 0;
+}
+#parent div:first-child {
+    display:block;
+}
+div{background:red}
+
+#parent > div{
+    width:400px;
+    height:250px;
+}
