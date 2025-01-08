@@ -11,7 +11,7 @@ $(function(){
     }
     
     $(function () {
-        setInterval(Divs, 1400);
+        setInterval(Divs, 14000);
     });
 
 

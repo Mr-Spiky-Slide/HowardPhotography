@@ -1,14 +1,16 @@
-*{font-family: 'Times New Roman', Times, serif;}
+*{font-family: 'Times New Roman', Times, serif;
+background-color:whitesmoke;
+}
+
 #parent div {
     display:none;
-    position: absolute;
-    top: 0;
-    left: 0;
+    
 }
 #parent div:first-child {
     display:block;
 }
-div{background:red}
+.box {background: bisque
+}
 
 #parent > div{
     width:400px;
