@@ -2,9 +2,14 @@
 background-color:whitesmoke;
 }
 
+.portfolio{
+    background-image: url("media/menu_images/gallery.jpg");
+}
+
+
 #parent div {
     display:none;
-    
+
 }
 #parent div:first-child {
     display:block;
