@@ -1,10 +1,36 @@
 *{font-family: 'Times New Roman', Times, serif;
-background-color:whitesmoke;
+/* background-color:whitesmoke; */
 }
 
-.portfolio{
-    background-image: url("media/menu_images/gallery.jpg");
-}
+.nav { text-decoration: none; color: inherit; }
+
+/* .portfolio {
+    
+    }
+
+.packages {
+    
+    }
+
+.contact {
+        
+        } */
+    
+
+    nav h3{
+        text-decoration: none; /* Removes underline */
+        color: black; /* Sets the link color to black (or your desired color) */
+    }
+    
+    /* Optionally style hover and active states for better interaction */
+    nav h3:hover {
+        color: blue; /* Change color on hover */
+    }
+    
+    nav h3:active {
+        color: red; /* Change color when the link is clicked */
+    }
+    
 
 
 #parent div {
