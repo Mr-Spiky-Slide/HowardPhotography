@@ -1,38 +1,66 @@
-*{font-family: 'Times New Roman', Times, serif;
+*{
+    font-family: 'Times New Roman', Times, serif;
+    box-sizing: border-box;
 /* background-color:whitesmoke; */
 }
 
-.nav { text-decoration: none; color: inherit; }
-
-/* .portfolio {
+.nav { 
+    text-align: center;
+    text-decoration: none; color: inherit; 
+    padding: 5%;
     
+    }
+
+.nav img{
+    max-width: 200px;
+}
+
+.portfolio {
+   float: left;
+   padding: 0%; 
     }
 
 .packages {
-    
+    float: left;
+    padding: 0%; 
+
     }
 
 .contact {
-        
-        } */
-    
+    float: left;    
+    padding: 0%; 
 
-    nav h3{
-        text-decoration: none; /* Removes underline */
-        color: black; /* Sets the link color to black (or your desired color) */
-    }
-    
-    /* Optionally style hover and active states for better interaction */
-    nav h3:hover {
-        color: blue; /* Change color on hover */
-    }
-    
-    nav h3:active {
-        color: red; /* Change color when the link is clicked */
-    }
-    
+        }
+
+.login{
+    float: left;
+    padding: 0%; 
+
+}
+ 
+.about{
+    text-align: center;
+    float: left;
+}
+
+.reachout, .about, .testamonials {
+    padding: 0;
+    text-align: center; /* Ensures text and images are centered */
+    width: 100%; /* Stretches each section to full width */
+    margin: 0 auto; /* Centers the section if necessary */
+    display: block;
+    width: 100%;
+    text-align: center; /* Align content in the center */
+    margin-top: 20px;
+    clear: both;
+}
 
 
+.testamonials{
+    text-align: center;
+    float: left;
+}
+    
 #parent div {
     display:none;
 
