@@ -20,10 +20,10 @@ header{
     max-width: 500px;
 }
 
-.portfolio, .packages, .contact, .login {
+/* .portfolio, .packages, .contact, .login {
    float:left;
    padding: 0%; 
-    }
+    } */
 
     .portfolio {
         padding: 100px 50px;
@@ -60,6 +60,7 @@ header{
 
     .portfolio-grid a:hover img {
         transform: scale(1.05);
+        filter: brightness(.8)
     }
 
     .portfolio-grid a span {
@@ -67,17 +68,18 @@ header{
         bottom: 10%;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.7);
+        background: rgba(0, 0, 0, 0.3);
         padding: 10px 20px;
         border-radius: 5px;
         font-size: 18px;
         font-weight: bold;
-        opacity: 0;
+        color: white;
+        opacity: 1;
         transition: opacity 0.3s ease;
     }
 
     .portfolio-grid a:hover span {
-        opacity: 1;
+        filter: brightness(.8);
     }
 
 
