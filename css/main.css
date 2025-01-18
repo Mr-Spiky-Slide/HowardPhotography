@@ -4,43 +4,89 @@
 /* background-color:whitesmoke; */
 }
 
+header{
+    background-color: rgb(38, 80, 66);
+    color: white;
+}
 .nav { 
     text-align: center;
+    align-items: center;
     text-decoration: none; color: inherit; 
     padding: 5%;
     
     }
 
 .nav img{
-    max-width: 200px;
+    max-width: 500px;
 }
 
-.portfolio {
-   float: left;
+.portfolio, .packages, .contact, .login {
+   float:left;
    padding: 0%; 
     }
 
-.packages {
-    float: left;
-    padding: 0%; 
-
+    .portfolio {
+        padding: 100px 50px;
+        text-align: center;
     }
 
-.contact {
-    float: left;    
-    padding: 0%; 
+    .portfolio h2 {
+        font-size: 36px;
+        margin-bottom: 50px;
+    }
 
-        }
+    .portfolio-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+        gap: 20px;
+    }
 
-.login{
-    float: left;
-    padding: 0%; 
+    .portfolio-grid a {
+        position: relative;
+        display: block;
+        text-decoration: none;
+        color: white;
+        overflow: hidden;
+        border-radius: 10px;
+        box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
+    }
 
-}
+    .portfolio-grid img {
+        width: 100%;
+        height: auto;
+        display: block;
+        transition: transform 0.3s ease;
+    }
+
+    .portfolio-grid a:hover img {
+        transform: scale(1.05);
+    }
+
+    .portfolio-grid a span {
+        position: absolute;
+        bottom: 10%;
+        left: 50%;
+        transform: translateX(-50%);
+        background: rgba(0, 0, 0, 0.7);
+        padding: 10px 20px;
+        border-radius: 5px;
+        font-size: 18px;
+        font-weight: bold;
+        opacity: 0;
+        transition: opacity 0.3s ease;
+    }
+
+    .portfolio-grid a:hover span {
+        opacity: 1;
+    }
+
+
+
  
 .about{
     text-align: center;
     float: left;
+    background-color:rgb(234, 216, 192);
 }
 
 .reachout, .about, .testamonials {
@@ -68,7 +114,9 @@
 #parent div:first-child {
     display:block;
 }
-.box {background: bisque
+.box {background: rgb(234, 216, 192);
+    text-align: center;
+    
 }
 
 #parent > div{
