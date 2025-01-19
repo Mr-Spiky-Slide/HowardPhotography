@@ -5,7 +5,8 @@
 }
 
 header{
-    background-color: rgb(38, 80, 66);
+    text-align: center;
+    background-color: rgb(97, 97, 97);
     color: white;
 }
 .nav { 
@@ -103,7 +104,73 @@ header{
     clear: both;
 }
 
+.kind-words {
+    padding: 100px 50px;
+    text-align: center;
+    background: #f9f9f9;
+}
 
+.kind-words h2 {
+    font-size: 36px;
+    margin-bottom: 50px;
+}
+
+.kind-words-slider {
+    position: relative;
+    max-width: 800px;
+    margin: 0 auto;
+    overflow: hidden;
+}
+
+.kind-words-slide {
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    text-align: left;
+    transition: transform 0.5s ease;
+}
+
+.kind-words-slide img {
+    width: 200px;
+    height: auto;
+    border-radius: 10px;
+    object-fit: cover;
+}
+
+.kind-words-content {
+    flex: 1;
+}
+
+.kind-words-content h3 {
+    font-size: 24px;
+    font-weight: bold;
+    margin-bottom: 10px;
+}
+
+.kind-words-content p {
+    font-size: 16px;
+    color: #666;
+}
+
+.slider-controls {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+}
+
+.slider-controls button {
+    background: #333;
+    color: white;
+    border: none;
+    padding: 10px 15px;
+    margin: 0 5px;
+    cursor: pointer;
+    border-radius: 5px;
+}
+
+.slider-controls button:hover {
+    background: #555;
+}
 .testamonials{
     text-align: center;
     float: left;
