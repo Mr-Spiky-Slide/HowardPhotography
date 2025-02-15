@@ -3,174 +3,54 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Howard Photography</title>
-    <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-
-        body {
-            font-family: 'Helvetica Neue', Arial, sans-serif;
-            color: #333;
-            background-color: #fff;
-            overflow-x: hidden;
-        }
-
-        header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            padding: 20px 50px;
-            position: fixed;
-            width: 100%;
-            background: rgba(255, 255, 255, 0.9);
-            z-index: 1000;
-        }
-
-        header a {
-            text-decoration: none;
-            color: #333;
-            font-weight: bold;
-            font-size: 18px;
-            margin-left: 20px;
-        }
-
-        header a:hover {
-            color: #555;
-        }
-
-        .hero {
-            height: 100vh;
-            background-image: url('your-hero-image.jpg');
-            background-size: cover;
-            background-position: center;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            text-align: center;
-        }
-
-        .hero h1 {
-            font-size: 50px;
-            color: white;
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
-        }
-
-        .hero p {
-            font-size: 20px;
-            color: white;
-            margin-top: 20px;
-            text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.7);
-        }
-
-        .portfolio {
-            padding: 100px 50px;
-            text-align: center;
-        }
-
-        .portfolio h2 {
-            font-size: 36px;
-            margin-bottom: 50px;
-        }
-
-        .portfolio-grid {
-            display: grid;
-            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
-            gap: 20px;
-        }
-
-        .portfolio-grid a {
-            position: relative;
-            display: block;
-            text-decoration: none;
-            color: white;
-            overflow: hidden;
-            border-radius: 10px;
-            box-shadow: 0 4px 10px rgba(0, 0, 0, 0.2);
-        }
-
-        .portfolio-grid img {
-            width: 100%;
-            height: auto;
-            display: block;
-            transition: transform 0.3s ease;
-        }
-
-        .portfolio-grid a:hover img {
-            transform: scale(1.05);
-        }
-
-        .portfolio-grid a span {
-            position: absolute;
-            bottom: 0;
-            width: 100%;
-            background: rgba(0, 0, 0, 0.6);
-            padding: 10px 0;
-            font-size: 18px;
-            font-weight: bold;
-            color: white;
-            text-align: center;
-            opacity: 1;
-        }
-
-        footer {
-            text-align: center;
-            padding: 20px;
-            background: #f4f4f4;
-            margin-top: 50px;
-        }
-
-        footer p {
-            font-size: 14px;
-            color: #666;
-        }
-    </style>
+    <title>Modern Portfolio</title>
+    <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-    <header>
-        <div class="logo">
-            <a href="#">Howard Photography</a>
+
+    <!-- Hero Section with Background Slideshow -->
+    <header class="hero">
+        <div class="overlay">
+            <h1 class="title">Welcome to My Portfolio</h1>
+            <nav class="nav">
+                <ul>
+                    <li><a href="#about">About</a></li>
+                    <li><a href="#portfolio">Portfolio</a></li>
+                    <li><a href="#details">Details</a></li>
+                    <li><a href="#contact">Contact</a></li>
+                </ul>
+            </nav>
         </div>
-        <nav>
-            <a href="#portfolio">Portfolio</a>
-            <a href="#about">About</a>
-            <a href="#contact">Contact</a>
-        </nav>
     </header>
 
-    <section class="hero">
-        <div>
-            <h1>Howard Photography</h1>
-            <p>Capturing moments, telling stories</p>
+    <!-- About Section -->
+    <section id="about" class="section fade-in">
+        <h2>About Me</h2>
+        <p>Passionate about design, innovation, and delivering impactful experiences.</p>
+    </section>
+
+    <!-- Projects Section -->
+    <section id="projects" class="section fade-in">
+        <h2>Featured Projects</h2>
+        <div class="project-grid">
+            <div class="project">
+                <img src="https://source.unsplash.com/400x300/?technology" alt="Project 1">
+                <h3>Project One</h3>
+            </div>
+            <div class="project">
+                <img src="https://source.unsplash.com/400x300/?design" alt="Project 2">
+                <h3>Project Two</h3>
+            </div>
         </div>
     </section>
 
-    <section class="portfolio" id="portfolio">
-        <h2>Portfolio</h2>
-        <div class="portfolio-grid">
-            <a href="page1.html">
-                <img src="photo1.jpg" alt="Photography 1">
-                <span>Gallery 1</span>
-            </a>
-            <a href="page2.html">
-                <img src="photo2.jpg" alt="Photography 2">
-                <span>Gallery 2</span>
-            </a>
-            <a href="page3.html">
-                <img src="photo3.jpg" alt="Photography 3">
-                <span>Gallery 3</span>
-            </a>
-            <a href="page4.html">
-                <img src="photo4.jpg" alt="Photography 4">
-                <span>Gallery 4</span>
-            </a>
-        </div>
+    <!-- Contact Section -->
+    <section id="contact" class="section fade-in">
+        <h2>Contact</h2>
+        <p>Interested in working together? Let’s connect.</p>
+        <a href="mailto:example@email.com" class="btn">Email Me</a>
     </section>
 
-    <footer>
-        <p>&copy; 2025 Howard Photography. All rights reserved.</p>
-    </footer>
+    <script src="script.js"></script>
 </body>
 </html>
