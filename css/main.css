@@ -8,7 +8,9 @@ header{
     text-align: center;
     background-color: rgb(97, 97, 97);
     color: white;
+    
 }
+
 .nav { 
     text-align: center;
     align-items: center;
@@ -69,7 +71,7 @@ header{
         bottom: 10%;
         left: 50%;
         transform: translateX(-50%);
-        background: rgba(0, 0, 0, 0.3);
+        background: rgba(0, 0, 0, 0);
         padding: 10px 20px;
         border-radius: 5px;
         font-size: 18px;
