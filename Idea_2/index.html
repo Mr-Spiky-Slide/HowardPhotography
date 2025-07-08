@@ -1,56 +1,804 @@
-<!DOCTYPE html>
-<html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Modern Portfolio</title>
-    <link rel="stylesheet" href="styles.css">
-</head>
-<body>
+import React, { useState, useEffect, useRef } from 'react';
+import { initializeApp } from 'firebase/app';
+import { getAuth, signInAnonymously, signInWithCustomToken, onAuthStateChanged } from 'firebase/auth';
+import { getFirestore, doc, getDoc, addDoc, setDoc, updateDoc, deleteDoc, onSnapshot, collection, query, where, getDocs } from 'firebase/firestore';
+import { getStorage, ref, uploadBytes, getDownloadURL } from 'firebase/storage';
 
-    <!-- Hero Section with Background Slideshow -->
-    <header class="hero">
-        <div class="overlay">
-            <h1 class="title">Welcome to My Portfolio</h1>
-            <nav class="nav">
-                <ul>
-                    <li><a href="#about">About</a></li>
-                    <li><a href="#portfolio">Portfolio</a></li>
-                    <li><a href="#details">Details</a></li>
-                    <li><a href="#contact">Contact</a></li>
-                </ul>
+// --- Firebase Initialization (Global variables provided by Canvas) ---
+const firebaseConfig = typeof __firebase_config !== 'undefined' ? JSON.parse(__firebase_config) : {};
+const app = initializeApp(firebaseConfig);
+const auth = getAuth(app);
+const db = getFirestore(app);
+const storage = getStorage(app);
+const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-howard-photography';
+
+// NavLink component for consistent styling
+const NavLink = ({ title, onClick, isCurrent }) => (
+  <button
+    className={`uppercase font-semibold tracking-wide transition duration-300
+      ${isCurrent ? 'underline underline-offset-4 text-[#C8A870]' : 'text-white hover:text-[#DCCBA5]'} text-base md:text-lg`}
+    onClick={onClick}
+  >
+    {title}
+  </button>
+);
+
+// Main App component
+const App = () => {
+  const [currentPage, setCurrentPage] = useState('home');
+  const [selectedCategory, setSelectedCategory] = useState(null);
+  const [showNavbar, setShowNavbar] = useState(true);
+  const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false);
+  const [userId, setUserId] = useState(null);
+  const [isAuthReady, setIsAuthReady] = useState(false);
+  const lastScrollY = useRef(0);
+
+  // Firebase Auth Listener
+  useEffect(() => {
+    const unsubscribe = onAuthStateChanged(auth, async (user) => {
+      if (user) {
+        setUserId(user.uid);
+      } else {
+        if (typeof __initial_auth_token === 'undefined') {
+          try {
+            const anonymousUserCredential = await signInAnonymously(auth);
+            setUserId(anonymousUserCredential.user.uid);
+          } catch (error) {
+            console.error("Error signing in anonymously:", error);
+          }
+        }
+      }
+      setIsAuthReady(true);
+    });
+
+    if (typeof __initial_auth_token !== 'undefined') {
+      signInWithCustomToken(auth, __initial_auth_token)
+        .catch((error) => {
+          console.error("Error signing in with custom token:", error);
+          signInAnonymously(auth).then(userCredential => setUserId(userCredential.user.uid));
+        });
+    } else {
+        if (!auth.currentUser) {
+            signInAnonymously(auth).then(userCredential => setUserId(userCredential.user.uid));
+        }
+    }
+
+    return () => unsubscribe();
+  }, []);
+
+  // Scroll effect for navbar
+  useEffect(() => {
+    const handleScroll = () => {
+      if (window.scrollY > lastScrollY.current && window.scrollY > 100) {
+        setShowNavbar(false);
+      } else {
+        setShowNavbar(true);
+      }
+      lastScrollY.current = window.scrollY;
+    };
+
+    window.addEventListener('scroll', handleScroll);
+    return () => {
+      window.removeEventListener('scroll', handleScroll);
+    };
+  }, []);
+
+  // Function to switch between sections
+  const navigateTo = (page, categoryId = null) => {
+    setCurrentPage(page);
+    setSelectedCategory(categoryId);
+    setIsMobileMenuOpen(false);
+  };
+
+  // Render loading state until Firebase Auth is ready
+  if (!isAuthReady) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-[#FBF8F3] text-[#4A3C33] text-xl">
+        Loading website...
+      </div>
+    );
+  }
+
+  return (
+    <div className="min-h-screen bg-[#FBF8F3] font-inter antialiased text-[#4A3C33]">
+      {/* Persistent Navbar */}
+      <header
+        className={`fixed w-full top-0 z-50 bg-neutral-900 bg-opacity-60 backdrop-blur-sm py-4 px-6 md:px-12 shadow-lg
+          transform transition-transform duration-300 ease-in-out
+          ${showNavbar ? 'translate-y-0' : '-translate-y-full'}`}
+      >
+        <div className="max-w-7xl mx-auto flex justify-between items-center">
+          {/* Social Icons - Top Left */}
+          <div className="flex space-x-4 text-white text-xl">
+            <a href="https://www.facebook.com/yourhowardphotography" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-[#DCCBA5] transition duration-300">
+              <i className="fab fa-facebook-f"></i>
+            </a>
+            <a href="https://www.instagram.com/yourhowardphotography" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-[#DCCBA5] transition duration-300">
+              <i className="fab fa-instagram"></i>
+            </a>
+            {/* Added Pixelfed link */}
+            <a href="https://pixelfed.social/howardphotography" target="_blank" rel="noopener noreferrer" aria-label="Pixelfed" className="hover:text-[#DCCBA5] transition duration-300">
+              <i className="fas fa-camera"></i> {/* Using a generic camera icon for Pixelfed */}
+            </a>
+          </div>
+
+          {/* Desktop Navigation Links */}
+          <nav className="hidden md:flex space-x-6 mr-auto ml-8">
+            <NavLink title="Home" onClick={() => navigateTo('home')} isCurrent={currentPage === 'home'} />
+            <NavLink title="Portfolio" onClick={() => navigateTo('portfolio')} isCurrent={currentPage === 'portfolio'} />
+            <NavLink title="About" onClick={() => navigateTo('about')} isCurrent={currentPage === 'about'} />
+            <NavLink title="Contact" onClick={() => navigateTo('contact')} isCurrent={currentPage === 'contact'} />
+            <NavLink title="Login" onClick={() => navigateTo('login')} isCurrent={currentPage === 'login'} />
+          </nav>
+
+          {/* Shrunken, Right-Aligned Circular Logo */}
+          <div className="flex flex-col items-center justify-center bg-[#E8E2D7] rounded-full p-2 shadow-md"
+               style={{ width: '80px', height: '80px', minWidth: '80px', minHeight: '80px' }}>
+            <h1 className="font-serif font-bold text-[#4A3C33] text-center leading-none" style={{ fontSize: '0.7rem' }}>
+                Howard<br/>Photography
+            </h1>
+            <span className="text-xs text-neutral-600 mt-1">EST. 2024</span>
+          </div>
+
+          {/* Hamburger Menu Icon (visible on mobile only) */}
+          <button
+            className="md:hidden text-white text-3xl ml-4"
+            onClick={() => setIsMobileMenuOpen(true)}
+            aria-label="Open menu"
+          >
+            <i className="fas fa-bars"></i>
+          </button>
+        </div>
+      </header>
+
+      {/* Mobile Menu Overlay and Sidebar */}
+      {isMobileMenuOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-75 z-[60]" onClick={() => setIsMobileMenuOpen(false)}>
+          <div
+            className="fixed right-0 top-0 h-full w-64 bg-neutral-900 text-white p-6 shadow-lg transform transition-transform duration-300 ease-in-out translate-x-0"
+            onClick={(e) => e.stopPropagation()}
+          >
+            <button
+              className="absolute top-4 right-4 text-white text-3xl"
+              onClick={() => setIsMobileMenuOpen(false)}
+              aria-label="Close menu"
+            >
+              <i className="fas fa-times"></i>
+            </button>
+            <nav className="flex flex-col space-y-6 mt-16">
+              <NavLink title="Home" onClick={() => navigateTo('home')} isCurrent={currentPage === 'home'} />
+              <NavLink title="Portfolio" onClick={() => navigateTo('portfolio')} isCurrent={currentPage === 'portfolio'} />
+              <NavLink title="About" onClick={() => navigateTo('about')} isCurrent={currentPage === 'about'} />
+              <NavLink title="Contact" onClick={() => navigateTo('contact')} isCurrent={currentPage === 'contact'} />
+              <NavLink title="Login" onClick={() => navigateTo('login')} isCurrent={currentPage === 'login'} />
             </nav>
+          </div>
         </div>
-    </header>
+      )}
 
-    <!-- About Section -->
-    <section id="about" class="section fade-in">
-        <h2>About Me</h2>
-        <p>Passionate about design, innovation, and delivering impactful experiences.</p>
-    </section>
+      {/* Font Awesome */}
+      <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.3/css/all.min.css" />
 
-    <!-- Projects Section -->
-    <section id="projects" class="section fade-in">
-        <h2>Featured Projects</h2>
-        <div class="project-grid">
-            <div class="project">
-                <img src="https://source.unsplash.com/400x300/?technology" alt="Project 1">
-                <h3>Project One</h3>
-            </div>
-            <div class="project">
-                <img src="https://source.unsplash.com/400x300/?design" alt="Project 2">
-                <h3>Project Two</h3>
-            </div>
+
+      {/* Main Content Area */}
+      <main className="pt-0">
+        {currentPage === 'home' && <HomeSection navigateTo={navigateTo} currentPage={currentPage} />}
+        {currentPage === 'portfolio' && <PortfolioSection navigateTo={navigateTo} />}
+        {currentPage === 'about' && <AboutSection />}
+        {currentPage === 'contact' && <ContactSection />}
+        {currentPage === 'login' && <LoginScreen navigateTo={navigateTo} userId={userId} />}
+        {currentPage === 'clientDashboard' && userId && <ClientDashboard currentUserId={selectedCategory} navigateTo={navigateTo} />}
+        {currentPage === 'portfolioDetail' && <PortfolioDetailPage categoryId={selectedCategory} />}
+      </main>
+
+      {/* Footer */}
+      <Footer navigateTo={navigateTo} /> {/* Pass navigateTo to Footer */}
+    </div>
+  );
+};
+
+// --- New Components for Login and Client Dashboard ---
+
+const LoginScreen = ({ navigateTo, userId }) => {
+  const [clientIdInput, setClientIdInput] = useState('');
+  const [loginMessage, setLoginMessage] = useState('');
+
+  const handleLogin = async () => {
+    if (!clientIdInput.trim()) {
+      setLoginMessage("Please enter a Client ID.");
+      return;
+    }
+
+    setLoginMessage(`Attempting to access photos for Client ID: ${clientIdInput}...`);
+    navigateTo('clientDashboard', clientIdInput);
+  };
+
+  return (
+    <section className="py-16 px-6 md:px-12 bg-[#FBF8F3] rounded-lg shadow-inner mx-auto max-w-xl mt-12 text-center">
+      <h2 className="text-4xl font-serif italic text-[#4A3C33] mb-8">Client Login</h2>
+      <div className="bg-[#E8E2D7] p-8 rounded-lg shadow-md space-y-6">
+        <p className="text-lg text-[#6B5A4E]">Enter your unique Client ID to access your private gallery.</p>
+        <div>
+          <label htmlFor="clientId" className="block text-[#4A3C33] text-sm font-bold mb-2 text-left">Client ID:</label>
+          <input
+            type="text"
+            id="clientId"
+            value={clientIdInput}
+            onChange={(e) => setClientIdInput(e.target.value)}
+            className="shadow appearance-none border rounded-md w-full py-3 px-4 text-[#4A3C33] leading-tight focus:outline-none focus:ring-2 focus:ring-[#C8A870] focus:border-transparent transition duration-200 bg-white"
+            placeholder="e.g., client-wedding-2024"
+          />
         </div>
+        <button
+          onClick={handleLogin}
+          className="w-full bg-[#C8A870] hover:bg-[#B28D4D] text-white font-bold py-3 px-6 rounded-md shadow-lg transform hover:scale-105 transition duration-300 ease-in-out"
+        >
+          Access My Photos
+        </button>
+        {loginMessage && <p className="text-[#6B5A4E] mt-4">{loginMessage}</p>}
+      </div>
     </section>
+  );
+};
 
-    <!-- Contact Section -->
-    <section id="contact" class="section fade-in">
-        <h2>Contact</h2>
-        <p>Interested in working together? Let’s connect.</p>
-        <a href="mailto:example@email.com" class="btn">Email Me</a>
+const ClientDashboard = ({ currentUserId, navigateTo }) => {
+  const [clientPhotos, setClientPhotos] = useState([]);
+  const [loadingPhotos, setLoadingPhotos] = useState(true);
+  const [message, setMessage] = useState('');
+
+  const clientId = currentUserId;
+
+  useEffect(() => {
+    if (!clientId) {
+      setLoadingPhotos(false);
+      setMessage("Please log in with a valid Client ID.");
+      return;
+    }
+
+    if (!auth.currentUser) {
+        console.warn("Firebase user not authenticated. Data fetching might fail if security rules require auth.");
+        signInAnonymously(auth).catch(e => console.error("Anonymous sign-in failed:", e));
+        setMessage("Authenticating... please wait.");
+        return;
+    }
+
+    const clientPhotosRef = collection(db, `artifacts/${appId}/clientData/${clientId}/photos`);
+    const q = query(clientPhotosRef);
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const photos = [];
+      snapshot.forEach((doc) => {
+        photos.push({ id: doc.id, ...doc.data() });
+      });
+      setClientPhotos(photos);
+      setLoadingPhotos(false);
+      if (photos.length === 0) {
+        setMessage("No photos found for this client yet. Please check back later!");
+      } else {
+        setMessage("");
+      }
+    }, (error) => {
+      console.error("Error fetching client photos:", error);
+      setLoadingPhotos(false);
+      setMessage("Error loading photos. Please ensure your Client ID is correct and check console for details.");
+    });
+
+    return () => unsubscribe();
+  }, [clientId, auth.currentUser]);
+
+  const handleDownload = (photoUrl, fileName) => {
+    window.open(photoUrl, '_blank');
+  };
+
+  if (loadingPhotos) {
+    return (
+      <section className="py-16 px-6 md:px-12 bg-[#FBF8F3] rounded-lg shadow-inner mx-auto max-w-7xl mt-12 text-center">
+        <h2 className="text-4xl font-serif italic text-[#4A3C33] mb-8">Client Dashboard</h2>
+        <p className="text-lg text-[#6B5A4E]">Loading your photos...</p>
+      </section>
+    );
+  }
+
+  return (
+    <section className="py-16 px-6 md:px-12 bg-[#FBF8F3] rounded-lg shadow-inner mx-auto max-w-7xl mt-12">
+      <h2 className="text-4xl font-serif italic text-center text-[#4A3C33] mb-8">
+        Welcome, Client: <span className="text-[#C8A870]">{clientId}</span>
+      </h2>
+
+      {/* Message display area */}
+      {message && (
+        <p className="text-center text-lg text-[#6B5A4E] mb-8">{message}</p>
+      )}
+
+      {/* Client's Private Gallery (View & Download Only) */}
+      {clientPhotos.length > 0 && (
+        <h3 className="text-3xl font-serif italic text-center text-[#4A3C33] mb-8">Your Private Gallery</h3>
+      )}
+      {clientPhotos.length === 0 ? (
+        !loadingPhotos && !message && <p className="text-center text-lg text-[#6B5A4E]">No photos found for this client yet. Please check back later!</p>
+      ) : (
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          {clientPhotos.map((photo) => (
+            <div key={photo.id} className="rounded-lg shadow-lg overflow-hidden bg-[#E8E2D7]">
+              <img
+                src={photo.photoUrl}
+                alt={photo.fileName}
+                className="w-full h-64 object-cover"
+                onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/600x400/cccccc/000000?text=Image+Error`; }}
+              />
+              <div className="p-4 flex flex-col items-center">
+                <p className="text-lg font-semibold text-[#4A3C33] mb-2">{photo.fileName}</p>
+                <button
+                  onClick={() => handleDownload(photo.photoUrl, photo.fileName)}
+                  className="bg-[#C8A870] hover:bg-[#B28D4D] text-white font-bold py-2 px-4 rounded-md shadow-md transition duration-300"
+                >
+                  Download
+                </button>
+              </div>
+            </div>
+          ))}
+        </div>
+      )}
     </section>
+  );
+};
 
-    <script src="script.js"></script>
-</body>
-</html>
+
+// --- Existing Components (no changes to functionality) ---
+
+// Home Section Component
+const HomeSection = ({ navigateTo, currentPage }) => {
+  const backgroundImages = [
+    'https://placehold.co/1920x1080/D9AA5B/FFFFFF?text=Golden+Hour+1',
+    'https://placehold.co/1920x1080/C48C42/FFFFFF?text=Golden+Hour+2',
+    'https://placehold.co/1920x1080/AD6F2D/FFFFFF?text=Golden+Hour+3',
+    'https://placehold.co/1920x1080/96511A/FFFFFF?text=Golden+Hour+4',
+  ];
+  const [currentImageIndex, setCurrentImageIndex] = useState(0);
+  const intervalRef = useRef(null);
+
+  const startSlideshow = () => {
+    if (intervalRef.current) clearInterval(intervalRef.current);
+    intervalRef.current = setInterval(() => {
+      setCurrentImageIndex((prevIndex) => (prevIndex + 1) % backgroundImages.length);
+    }, 5000);
+  };
+  useEffect(() => {
+    startSlideshow();
+    return () => { if (intervalRef.current) clearInterval(intervalRef.current); };
+  }, [backgroundImages.length]);
+
+  const goToPrevious = () => { if (intervalRef.current) clearInterval(intervalRef.current); setCurrentImageIndex((prevIndex) => (prevIndex - 1 + backgroundImages.length) % backgroundImages.length); startSlideshow(); };
+  const goToNext = () => { if (intervalRef.current) clearInterval(intervalRef.current); setCurrentImageIndex((prevIndex) => (prevIndex + 1) % backgroundImages.length); startSlideshow(); };
+
+  return (
+    <>
+      <section
+        className="relative h-screen bg-cover bg-center flex flex-col items-center justify-center py-8 px-4 transition-opacity duration-1000 ease-in-out pt-24"
+        style={{ backgroundImage: `url('${backgroundImages[currentImageIndex]}')`, backgroundSize: 'cover', backgroundPosition: 'center' }}
+      >
+        <div className="absolute inset-0 bg-black opacity-30"></div>
+        <div className="relative z-10 text-white text-center mb-0">
+          <h2 className="text-5xl sm:text-6xl md:text-8xl font-serif italic mb-4 drop-shadow-lg leading-tight">Howard Photography</h2>
+          <p className="text-lg sm:text-xl md:text-3xl max-w-4xl px-4 drop-shadow-md">Capturing your moments, creating timeless memories.</p>
+          <p className="text-base sm:text-lg md:text-xl max-w-2xl px-4 mt-2 drop-shadow-md">Serving clients in Waukesha, Wisconsin and surrounding areas.</p>
+        </div>
+        <div className="absolute top-1/2 left-0 right-0 z-20 flex justify-between px-4 -translate-y-1/2">
+          <button onClick={goToPrevious} className="text-white text-5xl opacity-70 hover:opacity-100 transition-opacity duration-300" aria-label="Previous">&lsaquo;</button>
+          <button onClick={goToNext} className="text-white text-5xl opacity-70 hover:opacity-100 transition-opacity duration-300" aria-label="Next">&rsaquo;</button>
+        </div>
+      </section>
+      <section className="py-16 px-6 md:px-12 bg-[#FBF8F3] rounded-lg shadow-inner mx-auto max-w-5xl mt-12 text-center">
+        <h2 className="text-3xl sm:text-4xl font-serif italic text-[#4A3C33] mb-6">Welcome to Howard Photography</h2>
+        <p className="text-base sm:text-lg text-[#6B5A4E] leading-relaxed max-w-3xl mx-auto">Hello! I'm Howard, and I'm thrilled you're here. My passion lies in capturing genuine emotions and the beauty of everyday moments. Whether it's the joy of a wedding, the innocence of childhood, or the serene beauty of a landscape, I believe every photograph tells a unique story. I strive to create images that are not just pictures, but cherished heirlooms that evoke feelings for years to come. Let's collaborate to tell your story through the lens.</p>
+      </section>
+      <section className="py-16 px-6 md:px-12 bg-[#E8E2D7] rounded-lg shadow-inner mx-auto max-w-5xl mt-12 text-center">
+        <h2 className="text-3xl sm:text-4xl font-serif italic text-[#4A3C33] mb-6">My Photography Philosophy</h2>
+        <p className="text-base sm:text-lg text-[#6B5A4E] leading-relaxed max-w-3xl mx-auto">Photography, to me, is more than just clicking a shutter; it's about connecting with people, understanding their essence, and freezing time. I focus on natural light and authentic interactions, aiming to create imagery that is both artistic and deeply personal. My goal is to craft photographs that resonate with emotion, celebrating the beauty in fleeting moments and turning them into lasting art.</p>
+      </section>
+      <section className="py-16 px-6 md:px-12 bg-[#FBF8F3] rounded-lg shadow-inner mx-auto max-w-7xl mt-12">
+        <h2 className="text-3xl sm:text-4xl font-serif italic text-center text-[#4A3C33] mb-12">Featured Photography Types</h2>
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+          <div className="rounded-lg shadow-lg overflow-hidden group cursor-pointer" onClick={() => navigateTo('portfolioDetail', 'portraits')}>
+            <img src="https://placehold.co/600x400/D9AA5B/FFFFFF?text=Portraits" alt="Portraits" className="w-full h-48 object-cover transform group-hover:scale-105 transition duration-300" />
+            <div className="p-6 bg-[#E8E2D7] text-center rounded-b-lg"><h3 className="text-xl font-semibold text-[#4A3C33]">Portraits</h3><p className="text-[#6B5A4E] text-sm mt-2">Capturing individual personalities and beauty.</p></div>
+          </div>
+          <div className="rounded-lg shadow-lg overflow-hidden group cursor-pointer" onClick={() => navigateTo('portfolioDetail', 'weddings')}>
+            <img src="https://placehold.co/600x400/C48C42/FFFFFF?text=Weddings" alt="Weddings" className="w-full h-48 object-cover transform group-hover:scale-105 transition duration-300" />
+            <div className="p-6 bg-[#E8E2D7] text-center rounded-b-lg"><h3 className="text-xl font-semibold text-[#4A3C33]">Weddings</h3><p className="text-[#6B5A4E] text-sm mt-2">Documenting your special day with timeless elegance.</p></div>
+          </div>
+          <div className="rounded-lg shadow-lg overflow-hidden group cursor-pointer" onClick={() => navigateTo('portfolioDetail', 'family')}>
+            <img src="https://placehold.co/600x400/AD6F2D/FFFFFF?text=Family" alt="Family" className="w-full h-48 object-cover transform group-hover:scale-105 transition duration-300" />
+            <div className="p-6 bg-[#E8E2D7] text-center rounded-b-lg"><h3 className="text-xl font-semibold text-[#4A3C33]">Family</h3><p className="text-[#6B5A4E] text-sm mt-2">Creating beautiful memories for your loved ones.</p></div>
+          </div>
+        </div>
+      </section>
+      <section className="py-16 px-6 md:px-12 bg-[#E8E2D7] rounded-lg shadow-inner mx-auto max-w-5xl mt-12">
+        <h2 className="text-3xl sm:text-4xl font-serif italic text-center text-[#4A3C33] mb-12">Kind Words from Clients</h2>
+        <div className="space-y-8">
+          <div className="bg-[#FBF8F3] p-8 rounded-lg shadow-md border-l-4 border-[#C8A870]">
+            <p className="text-base sm:text-lg italic text-[#6B5A4E] mb-4">"Howard's ability to capture the essence of our family was truly remarkable. Every photo tells a story, and the light he works with is simply magical. We will cherish these for a lifetime!"</p>
+            <p className="text-right font-bold text-[#4A3C33]">- Jane Doe</p>
+          </div>
+          <div className="bg-[#FBF8F3] p-8 rounded-lg shadow-md border-l-4 border-[#C8A370]">
+            <p className="text-base sm:text-lg italic text-[#6B5A4E] mb-4">"Working with Howard for our wedding was an absolute pleasure. He made us feel so comfortable, and the final photos exceeded all our expectations. Highly recommend!"</p>
+            <p className="text-right font-bold text-[#4A3C33]">- John & Sarah Smith</p>
+          </div>
+          <div className="bg-[#FBF8F3] p-8 rounded-lg shadow-md border-l-4 border-[#C8A870]">
+            <p className="text-base sm:text-lg italic text-[#6B5A4E] mb-4">"I needed professional headshots for my business, and Howard delivered beyond what I imagined. His eye for detail and understanding of branding really shine through."</p>
+            <p className="text-right font-bold text-[#4A3C33]">- Emily White</p>
+          </div>
+        </div>
+      </section>
+    </>
+  );
+};
+
+// Portfolio Section Component
+const PortfolioSection = ({ navigateTo }) => {
+  const images = [
+    { id: 'portraits', src: 'https://placehold.co/800x600/D9AA5B/FFFFFF?text=Portraits', title: 'Portraits' },
+    { id: 'weddings', src: 'https://placehold.co/800x600/C48C42/FFFFFF?text=Weddings', title: 'Weddings' },
+    { id: 'family', src: 'https://placehold.co/800x600/AD6F2D/FFFFFF?text=Family', title: 'Family' },
+    { id: 'events', src: 'https://placehold.co/800x600/96511A/FFFFFF?text=Events', title: 'Events' },
+    { id: 'landscapes', src: 'https://placehold.co/800x600/B2A486/FFFFFF?text=Landscapes', title: 'Landscapes' },
+    { id: 'commercial', src: 'https://placehold.co/800x600/8C7C60/FFFFFF?text=Commercial', title: 'Commercial' },
+  ];
+
+  return (
+    <section className="py-16 px-6 md:px-12 bg-[#FBF8F3] rounded-lg shadow-inner mx-auto max-w-7xl mt-12">
+      <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#4A3C33] mb-12 rounded-md">Our Portfolio</h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {images.map((image) => (
+          <div
+            key={image.id}
+            className="relative overflow-hidden rounded-lg shadow-lg group cursor-pointer"
+            onClick={() => navigateTo('portfolioDetail', image.id)}
+          >
+            <img
+              src={image.src}
+              alt={image.title}
+              className="w-full h-64 object-cover transform group-hover:scale-110 transition duration-500 ease-in-out rounded-lg"
+              onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/800x600/cccccc/000000?text=Image+Error`; }}
+            />
+            <div className="absolute inset-0 bg-black bg-opacity-40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity duration-500 rounded-lg">
+              <p className="text-white text-lg font-semibold">{image.title}</p>
+            </div>
+          </div>
+        ))}
+      </div>
+    </section>
+  );
+};
+
+// Portfolio Detail Page Component
+const PortfolioDetailPage = ({ categoryId }) => {
+  const categoryImages = {
+    portraits: [
+      'https://placehold.co/1000x800/D9AA5B/FFFFFF?text=Portrait+Full+1', 'https://placehold.co/1000x800/C48C42/FFFFFF?text=Portrait+Full+2',
+      'https://placehold.co/1000x800/AD6F2D/FFFFFF?text=Portrait+Full+3', 'https://placehold.co/1000x800/96511A/FFFFFF?text=Portrait+Full+4',
+    ],
+    weddings: [
+      'https://placehold.co/1000x800/FFDAB9/FFFFFF?text=Wedding+Full+1', 'https://placehold.co/1000x800/E9967A/FFFFFF?text=Wedding+Full+2',
+      'https://placehold.co/1000x800/CD853F/FFFFFF?text=Wedding+Full+3', 'https://placehold.co/1000x800/D2B48C/FFFFFF?text=Wedding+Full+4',
+    ],
+    family: [
+      'https://placehold.co/1000x800/F0E68C/FFFFFF?text=Family+Full+1', 'https://placehold.co/1000x800/DAA520/FFFFFF?text=Family+Full+2',
+      'https://placehold.co/1000x800/B8860B/FFFFFF?text=Family+Full+3', 'https://placehold.co/1000x800/CD7F32/FFFFFF?text=Family+Full+4',
+    ],
+    events: [
+      'https://placehold.co/1000x800/8B4513/FFFFFF?text=Event+Full+1', 'https://placehold.co/1000x800/A0522D/FFFFFF?text=Event+Full+2',
+      'https://placehold.co/1000x800/D2691E/FFFFFF?text=Event+Full+3', 'https://placehold.co/1000x800/F4A460/FFFFFF?text=Event+Full+4',
+    ],
+    landscapes: [
+      'https://placehold.co/1000x800/6B8E23/FFFFFF?text=Landscape+Full+1', 'https://placehold.co/1000x800/8FBC8F/FFFFFF?text=Landscape+Full+2',
+      'https://placehold.co/1000x800/556B2F/FFFFFF?text=Landscape+Full+3', 'https://placehold.co/1000x800/3CB371/FFFFFF?text=Landscape+Full+4',
+    ],
+    commercial: [
+      'https://placehold.co/1000x800/4682B4/FFFFFF?text=Commercial+Full+1', 'https://placehold.co/1000x800/6A5ACD/FFFFFF?text=Commercial+Full+2',
+      'https://placehold.co/1000x800/778899/FFFFFF?text=Commercial+Full+3', 'https://placehold.co/1000x800/5F9EA0/FFFFFF?text=Commercial+Full+4',
+    ],
+  };
+
+  const imagesToDisplay = categoryImages[categoryId] || [];
+  const categoryTitle = categoryId ? categoryId.charAt(0).toUpperCase() + categoryId.slice(1) : 'Gallery';
+
+  return (
+    <section className="py-16 px-6 md:px-12 bg-[#FBF8F3] rounded-lg shadow-inner mx-auto max-w-7xl mt-12">
+      <h2 className="text-3xl sm:text-4xl font-serif italic text-center text-[#4A3C33] mb-12">
+        {categoryTitle} Gallery
+      </h2>
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-8">
+        {imagesToDisplay.length > 0 ? (
+          imagesToDisplay.map((imgSrc, index) => (
+            <div key={index} className="rounded-lg shadow-lg overflow-hidden">
+              <img src={imgSrc} alt={`${categoryTitle} Image ${index + 1}`} className="w-full h-auto object-cover" />
+            </div>
+          ))
+        ) : (
+          <p className="col-span-full text-center text-lg text-[#6B5A4E]">No images found for this category.</p>
+        )}
+      </div>
+    </section>
+  );
+};
+
+// About Section Component - Expanded with Pricing, FAQ, Privacy, Terms
+const AboutSection = () => {
+  const [openFaq, setOpenFaq] = useState(null); // State to manage open FAQ item
+
+  const toggleFaq = (index) => {
+    setOpenFaq(openFaq === index ? null : index);
+  };
+
+  const faqs = [
+    {
+      question: "What is your photography style?",
+      answer: "My style is a blend of natural light, candid moments, and artistic composition, aiming for warm, timeless, and authentic images. I focus on capturing genuine emotions and the unique story of each client."
+    },
+    {
+      question: "How do I receive my photos?",
+      answer: "Your final edited photos will be delivered via a private online gallery, accessible through the client login portal on this website. From there, you can view, share, and download your high-resolution images."
+    },
+    {
+      question: "What is your turnaround time?",
+      answer: "For most sessions, the turnaround time for final delivery is typically 2-4 weeks. For weddings, it can be up to 6-8 weeks. A sneak peek will often be provided within a few days of your session."
+    },
+    {
+      question: "Do you offer prints or albums?",
+      answer: "Yes, I offer a range of high-quality print options, custom albums, and wall art. These can be ordered directly through your private online gallery after your photos are delivered."
+    }
+  ];
+
+  return (
+    <section className="py-16 px-6 md:px-12 bg-[#E8E2D7] rounded-lg shadow-inner mx-auto max-w-7xl mt-12">
+      <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#4A3C33] mb-12 rounded-md">About Howard Photography</h2>
+
+      {/* Main About Us Content */}
+      <div className="flex flex-col md:flex-row items-center md:space-x-12 mb-16">
+        <div className="md:w-1/2 mb-8 md:mb-0">
+          <img
+            src="https://placehold.co/600x400/808080/FFFFFF?text=About+Us"
+            alt="About Howard Photography"
+            className="rounded-lg shadow-lg w-full h-auto object-cover"
+            onError={(e) => { e.target.onerror = null; e.target.src = `https://placehold.co/600x400/cccccc/000000?text=About+Image+Error`; }}
+          />
+        </div>
+        <div className="md:w-1/2 text-[#6B5A4E] leading-relaxed text-lg rounded-md bg-[#FBF8F3] p-6 shadow-md">
+          <p className="mb-4">
+            Welcome to Howard Photography, where every click tells a story. We are passionate about capturing the fleeting moments that become cherished memories. With a keen eye for detail and a dedication to timeless artistry, we strive to deliver stunning photographs that reflect your unique personality and vision.
+          </p>
+          <p className="mb-4">
+            Our journey began with a simple love for photography and has grown into a commitment to providing exceptional visual experiences. From intimate portraits to grand events, we approach each session with creativity, professionalism, and a genuine desire to bring your moments to life.
+          </p>
+          <p>
+            Based in Waukesha, Wisconsin, we are delighted to serve clients across the surrounding areas. We believe that photography is more than just taking pictures; it's about preserving emotions, telling narratives, and creating art that lasts a lifetime. Let's create something beautiful together.
+          </p>
+        </div>
+      </div>
+
+      {/* Pricing Section */}
+      <div className="my-16">
+        <h3 className="text-3xl font-serif italic text-center text-[#4A3C33] mb-8">Pricing & Packages</h3>
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 max-w-6xl mx-auto">
+          {/* Package 1 */}
+          <div className="bg-[#FBF8F3] p-8 rounded-lg shadow-md border-t-4 border-[#C8A870] flex flex-col items-center text-center">
+            <h4 className="text-2xl font-semibold text-[#4A3C33] mb-4">Essential Session</h4>
+            <p className="text-4xl font-bold text-[#C8A870] mb-4">$350</p>
+            <ul className="text-lg text-[#6B5A4E] space-y-2 mb-6">
+              <li>1 Hour Session</li>
+              <li>1 Location</li>
+              <li>20 Digital Images</li>
+              <li>Online Gallery</li>
+            </ul>
+            <button className="bg-[#C8A870] hover:bg-[#B28D4D] text-white font-bold py-2 px-6 rounded-full shadow-md transition duration-300">Learn More</button>
+          </div>
+          {/* Package 2 */}
+          <div className="bg-[#FBF8F3] p-8 rounded-lg shadow-md border-t-4 border-[#C8A870] flex flex-col items-center text-center">
+            <h4 className="text-2xl font-semibold text-[#4A3C33] mb-4">Premium Collection</h4>
+            <p className="text-4xl font-bold text-[#C8A870] mb-4">$600</p>
+            <ul className="text-lg text-[#6B5A4E] space-y-2 mb-6">
+              <li>2 Hour Session</li>
+              <li>Up to 2 Locations</li>
+              <li>40 Digital Images</li>
+              <li>Online Gallery & Print Release</li>
+            </ul>
+            <button className="bg-[#C8A870] hover:bg-[#B28D4D] text-white font-bold py-2 px-6 rounded-full shadow-md transition duration-300">Learn More</button>
+          </div>
+          {/* Package 3 */}
+          <div className="bg-[#FBF8F3] p-8 rounded-lg shadow-md border-t-4 border-[#C8A870] flex flex-col items-center text-center">
+            <h4 className="text-2xl font-semibold text-[#4A3C33] mb-4">Deluxe Experience</h4>
+            <p className="text-4xl font-bold text-[#C8A870] mb-4">$950</p>
+            <ul className="text-lg text-[#6B5A4E] space-y-2 mb-6">
+              <li>3 Hour Session</li>
+              <li>Multiple Locations</li>
+              <li>All Digital Images (60+)</li>
+              <li>Online Gallery, Print Release & Small Album</li>
+            </ul>
+            <button className="bg-[#C8A870] hover:bg-[#B28D4D] text-white font-bold py-2 px-6 rounded-full shadow-md transition duration-300">Learn More</button>
+          </div>
+        </div>
+      </div>
+
+      {/* FAQ Section */}
+      <div className="my-16">
+        <h3 className="text-3xl font-serif italic text-center text-[#4A3C33] mb-8">Frequently Asked Questions</h3>
+        <div className="max-w-4xl mx-auto space-y-4">
+          {faqs.map((faq, index) => (
+            <div key={index} className="bg-[#FBF8F3] rounded-lg shadow-md">
+              <button
+                className="w-full text-left p-6 flex justify-between items-center text-lg font-semibold text-[#4A3C33] focus:outline-none"
+                onClick={() => toggleFaq(index)}
+              >
+                {faq.question}
+                <span className="text-[#C8A870] text-xl">{openFaq === index ? '-' : '+'}</span>
+              </button>
+              {openFaq === index && (
+                <div className="p-6 pt-0 text-[#6B5A4E] leading-relaxed">
+                  <p>{faq.answer}</p>
+                </div>
+              )}
+            </div>
+          ))}
+        </div>
+      </div>
+
+      {/* Privacy Policy Section */}
+      <div className="my-16">
+        <h3 className="text-3xl font-serif italic text-center text-[#4A3C33] mb-8">Privacy Policy</h3>
+        <div className="bg-[#FBF8F3] p-8 rounded-lg shadow-md max-w-4xl mx-auto text-[#6B5A4E] leading-relaxed">
+          <p className="mb-4">
+            At Howard Photography, we are committed to protecting your privacy. This Privacy Policy outlines how we collect, use, and safeguard your personal information when you visit our website or use our services.
+          </p>
+          <p className="mb-4">
+            We collect information that you voluntarily provide to us when you express an interest in obtaining information about us or our products and services, when you participate in activities on the website, or otherwise when you contact us. The personal information that we collect depends on the context of your interactions with us and the website, the choices you make, and the products and features you use.
+          </p>
+          <p className="mb-4">
+            We use personal information collected via our website for various business purposes described below. We process your personal information for these purposes in reliance on our legitimate business interests, in order to enter into or perform a contract with you, with your consent, and/or for compliance with our legal obligations.
+          </p>
+          <p>
+            We do not share, sell, rent, or trade any of your information with third parties for their promotional purposes. We may disclose your information where we are legally required to do so in order to comply with applicable law, governmental requests, a judicial proceeding, court order, or legal process.
+          </p>
+        </div>
+      </div>
+
+      {/* Terms of Service Section */}
+      <div className="my-16">
+        <h3 className="text-3xl font-serif italic text-center text-[#4A3C33] mb-8">Terms of Service</h3>
+        <div className="bg-[#FBF8F3] p-8 rounded-lg shadow-md max-w-4xl mx-auto text-[#6B5A4E] leading-relaxed">
+          <p className="mb-4">
+            These Terms of Service ("Terms") govern your access to and use of the Howard Photography website and services. By accessing or using the Service, you agree to be bound by these Terms. If you disagree with any part of the terms then you may not access the Service.
+          </p>
+          <p className="mb-4">
+            **Content:** All content provided on the Service, including but not limited to text, graphics, images, and information, is the property of Howard Photography or its content suppliers and protected by copyright laws. You may not reproduce, distribute, modify, or create derivative works of any content without prior written permission from us.
+          </p>
+          <p className="mb-4">
+            **User Conduct:** You agree to use the Service only for lawful purposes and in a way that does not infringe the rights of, restrict, or inhibit anyone else's use and enjoyment of the Service. Prohibited behavior includes harassing or causing distress or inconvenience to any other user, transmitting obscene or offensive content, or disrupting the normal flow of dialogue within the Service.
+          </p>
+          <p>
+            **Limitation of Liability:** Howard Photography will not be liable for any damages of any kind arising from the use of this site, including, but not limited to direct, indirect, incidental, punitive, and consequential damages.
+          </p>
+        </div>
+      </div>
+    </section>
+  );
+};
+
+// Contact Section Component
+const ContactSection = () => {
+  const [formData, setFormData] = useState({ name: '', email: '', subject: '', message: '' });
+  const [message, setMessage] = useState('');
+  const [messageType, setMessageType] = useState('');
+  const [isSubmitting, setIsSubmitting] = useState(false);
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prevData) => ({ ...prevData, [name]: value }));
+  };
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setIsSubmitting(true);
+    const form = e.target;
+    const formData = new FormData(form);
+
+    try {
+      const response = await fetch(form.action, {
+        method: form.method,
+        body: formData,
+        headers: { 'Accept': 'application/json' }
+      });
+      if (response.ok) {
+        setMessage('Thank you for your message! We will get back to you soon.');
+        setMessageType('success');
+        setFormData({ name: '', email: '', subject: '', message: '' });
+      } else {
+        const data = await response.json();
+        setMessage(data.errors ? data.errors.map(error => error.message).join(", ") : 'Oops! There was an error sending your message.');
+        setMessageType('error');
+      }
+    } catch (error) {
+      console.error("Error submitting form:", error);
+      setMessage('Failed to send message. Please check your network connection.');
+      setMessageType('error');
+    } finally {
+      setIsSubmitting(false);
+      setTimeout(() => setMessage(''), 5000);
+    }
+  };
+
+  return (
+    <section className="py-16 px-6 md:px-12 bg-[#FBF8F3] rounded-lg shadow-inner mx-auto max-w-7xl">
+      <h2 className="text-3xl sm:text-4xl font-bold text-center text-[#4A3C33] mb-12 rounded-md">Contact Us</h2>
+      <div className="max-w-3xl mx-auto">
+        {message && (
+          <div className={`mb-4 p-4 rounded-md ${messageType === 'success' ? 'bg-green-100 text-green-800' : 'bg-red-100 text-red-800'}`}>
+            {message}
+          </div>
+        )}
+        <form onSubmit={handleSubmit} action="https://formspree.io/f/xblybolv" method="POST" className="space-y-6 bg-[#E8E2D7] p-8 rounded-lg shadow-md">
+          <div>
+            <label htmlFor="name" className="block text-[#4A3C33] text-sm font-bold mb-2">Name:</label>
+            <input type="text" id="name" name="name" value={formData.name} onChange={handleChange} required className="shadow appearance-none border rounded-md w-full py-3 px-4 text-[#4A3C33] leading-tight focus:outline-none focus:ring-2 focus:ring-[#C8A870] focus:border-transparent transition duration-200 bg-white" />
+          </div>
+          <div>
+            <label htmlFor="email" className="block text-[#4A3C33] text-sm font-bold mb-2">Email:</label>
+            <input type="email" id="email" name="email" value={formData.email} onChange={handleChange} required className="shadow appearance-none border rounded-md w-full py-3 px-4 text-[#4A3C33] leading-tight focus:outline-none focus:ring-2 focus:ring-[#C8A870] focus:border-transparent transition duration-200 bg-white" />
+          </div>
+          <div>
+            <label htmlFor="subject" className="block text-[#4A3C33] text-sm font-bold mb-2">Subject:</label>
+            <input type="text" id="subject" name="subject" value={formData.subject} onChange={handleChange} className="shadow appearance-none border rounded-md w-full py-3 px-4 text-[#4A3C33] leading-tight focus:outline-none focus:ring-2 focus:ring-[#C8A870] focus:border-transparent transition duration-200 bg-white" />
+          </div>
+          <div>
+            <label htmlFor="message" className="block text-[#4A3C33] text-sm font-bold mb-2">Message:</label>
+            <textarea id="message" name="message" value={formData.message} onChange={handleChange} rows="6" required className="shadow appearance-none border rounded-md w-full py-3 px-4 text-[#4A3C33] leading-tight focus:outline-none focus:ring-2 focus:ring-[#C8A870] focus:border-transparent transition duration-200 resize-y bg-white" />
+          </div>
+          <button type="submit" className="w-full bg-[#C8A870] hover:bg-[#B28D4D] text-white font-bold py-3 px-6 rounded-md shadow-lg transform hover:scale-105 transition duration-300 ease-in-out" disabled={isSubmitting}>
+            {isSubmitting ? 'Sending...' : 'Send Message'}
+          </button>
+        </form>
+      </div>
+    </section>
+  );
+};
+
+
+// Dedicated Footer Component
+const Footer = ({ navigateTo }) => ( // Accept navigateTo as a prop
+  <footer className="bg-[#4A3C33] text-white py-12 px-6 md:px-12 text-center mt-12 rounded-t-lg">
+    <div className="max-w-7xl mx-auto grid grid-cols-1 md:grid-cols-3 gap-8 text-left">
+      <div className="flex flex-col items-center md:items-start">
+        <p className="text-sm mb-4 text-[#DCCBA5]">&copy; {new Date().getFullYear()} Howard Photography. All rights reserved.</p>
+        <div className="flex justify-center md:justify-start space-x-4 text-white text-xl">
+          <a href="https://www.facebook.com/yourhowardphotography" target="_blank" rel="noopener noreferrer" aria-label="Facebook" className="hover:text-[#DCCBA5] transition duration-300"><i className="fab fa-facebook-f"></i></a>
+          <a href="https://www.instagram.com/yourhowardphotography" target="_blank" rel="noopener noreferrer" aria-label="Instagram" className="hover:text-[#DCCBA5] transition duration-300"><i className="fab fa-instagram"></i></a>
+          <a href="https://pixelfed.social/howardphotography" target="_blank" rel="noopener noreferrer" aria-label="Pixelfed" className="hover:text-[#DCCBA5] transition duration-300">
+            <i className="fas fa-camera"></i>
+          </a>
+        </div>
+      </div>
+      <div className="text-center md:text-left">
+        <h3 className="text-lg font-semibold mb-4 text-[#C8A870]">Quick Links</h3>
+        <ul className="space-y-2">
+          <li><button onClick={() => navigateTo('home')} className="text-[#DCCBA5] hover:text-white transition duration-300">Home</button></li>
+          <li><button onClick={() => navigateTo('portfolio')} className="text-[#DCCBA5] hover:text-white transition duration-300">Portfolio</button></li>
+          <li><button onClick={() => navigateTo('about')} className="text-[#DCCBA5] hover:text-white transition duration-300">About</button></li>
+          <li><button onClick={() => navigateTo('contact')} className="text-[#DCCBA5] hover:text-white transition duration-300">Contact</button></li>
+          <li><button onClick={() => navigateTo('about')} className="text-[#DCCBA5] hover:text-white transition duration-300">Services</button></li> {/* Now links to About page */}
+        </ul>
+      </div>
+      <div className="text-center md:text-left">
+        <h3 className="text-lg font-semibold mb-4 text-[#C8A870]">More Info</h3>
+        <ul className="space-y-2">
+          <li><button onClick={() => navigateTo('about')} className="text-[#DCCBA5] hover:text-white transition duration-300">Pricing</button></li> {/* Links to About page */}
+          <li><button onClick={() => navigateTo('about')} className="text-[#DCCBA5] hover:text-white transition duration-300">FAQs</button></li> {/* Links to About page */}
+          {/* Blog link removed */}
+          <li><button onClick={() => navigateTo('about')} className="text-[#DCCBA5] hover:text-white transition duration-300">Privacy Policy</button></li> {/* Links to About page */}
+          <li><button onClick={() => navigateTo('about')} className="text-[#DCCBA5] hover:text-white transition duration-300">Terms of Service</button></li> {/* Links to About page */}
+        </ul>
+      </div>
+    </div>
+  </footer>
+);
+
+export default App;
